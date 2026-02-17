@@ -1,260 +1,141 @@
-from fastapi import FastAPI, HTTPException, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import os
+from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
+import os
 import psycopg2
-from psycopg2.extras import RealDictCursor
+from cryptography.fernet import Fernet
 from datetime import datetime, timedelta
+from passlib.hash import bcrypt
 
-from encryption import EncryptionEngine
+app = FastAPI()
 
-
-# =========================
-# Environment Variables
-# =========================
-
+# Config
+JWT_SECRET = os.environ.get("JWT_SECRET")
 DATABASE_URL = os.environ.get("DATABASE_URL")
-JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret")
-JWT_ALGORITHM = "HS256"
+FERNET_KEY = os.environ.get("CIPHERMIND_KEY")
 
-if not DATABASE_URL:
-    raise Exception("DATABASE_URL not set")
-
-
-# =========================
-# Database Connection
-# =========================
+cipher = Fernet(FERNET_KEY.encode())
+security = HTTPBearer()
 
 def get_db():
-    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    return psycopg2.connect(DATABASE_URL)
 
+def verify_token(creds: HTTPAuthorizationCredentials = Depends(security)):
+    try:
+        payload = jwt.decode(creds.credentials, JWT_SECRET, algorithms=["HS256"])
+        return payload
+    except:
+        raise HTTPException(401, "Invalid token")
 
-def init_db():
+# Register
+@app.post("/register")
+def register(data: dict):
     conn = get_db()
     cur = conn.cursor()
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    """)
+    password_hash = bcrypt.hash(data["password"])
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS secrets (
-        id SERIAL PRIMARY KEY,
-        name TEXT NOT NULL,
-        encrypted_value TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    """)
+    cur.execute(
+        "INSERT INTO users(username,password_hash,role) VALUES(%s,%s,%s)",
+        (data["username"], password_hash, "admin")
+    )
 
     conn.commit()
-    conn.close()
+    return {"status": "created"}
 
+# Login
+@app.post("/login")
+def login(data: dict):
+    conn = get_db()
+    cur = conn.cursor()
 
-# =========================
-# Encryption Engine
-# =========================
+    cur.execute(
+        "SELECT id,password_hash FROM users WHERE username=%s",
+        (data["username"],)
+    )
 
-encryption = EncryptionEngine()
+    user = cur.fetchone()
 
+    if not user or not bcrypt.verify(data["password"], user[1]):
+        raise HTTPException(401, "Invalid credentials")
 
-# =========================
-# FastAPI App
-# =========================
+    token = jwt.encode(
+        {
+            "user_id": user[0],
+            "exp": datetime.utcnow() + timedelta(hours=8)
+        },
+        JWT_SECRET,
+        algorithm="HS256"
+    )
 
-app = FastAPI(title="CipherMind Enterprise API")
+    return {"token": token}
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-# =========================
-# Models
-# =========================
-
-class EncryptRequest(BaseModel):
-    text: str
-
-
-class LoginRequest(BaseModel):
-    username: str
-    password: str
-
-
-class SecretRequest(BaseModel):
-    name: str
-    value: str
-
-
-# =========================
-# Auth Helpers
-# =========================
-
-def create_token(username):
-    payload = {
-        "username": username,
-        "exp": datetime.utcnow() + timedelta(hours=24)
-    }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-
-
-def verify_token(token: str):
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return payload["username"]
-    except:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-
-# =========================
-# Health Check
-# =========================
-
-@app.get("/")
-def root():
-    return {
-        "message": "CipherMind Enterprise API running",
-        "status": "healthy",
-        "version": "enterprise"
-    }
-
-
-# =========================
-# Encryption Endpoint
-# =========================
-
+# Encrypt
 @app.post("/encrypt")
-def encrypt(req: EncryptRequest):
-    encrypted = encryption.encrypt(req.text)
+def encrypt(data: dict, user=Depends(verify_token)):
+    encrypted = cipher.encrypt(data["text"].encode()).decode()
     return {"encrypted": encrypted}
 
-
-@app.post("/decrypt")
-def decrypt(data: dict):
-    decrypted = encryption.decrypt(data["encrypted"])
-    return {"decrypted": decrypted}
-
-
-# =========================
-# Authentication
-# =========================
-
-@app.post("/register")
-def register(user: LoginRequest):
-    conn = get_db()
-    cur = conn.cursor()
-
-    try:
-        cur.execute(
-            "INSERT INTO users (username, password) VALUES (%s, %s)",
-            (user.username, user.password)
-        )
-        conn.commit()
-    except:
-        raise HTTPException(status_code=400, detail="User exists")
-
-    finally:
-        conn.close()
-
-    return {"message": "User created"}
-
-
-@app.post("/login")
-def login(user: LoginRequest):
-    conn = get_db()
-    cur = conn.cursor()
-
-    cur.execute(
-        "SELECT * FROM users WHERE username=%s AND password=%s",
-        (user.username, user.password)
-    )
-
-    result = cur.fetchone()
-    conn.close()
-
-    if not result:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-
-    token = create_token(user.username)
-
-    return {
-        "token": token,
-        "type": "Bearer"
-    }
-
-
-# =========================
-# Secrets Vault
-# =========================
-
+# Store Secret
 @app.post("/secrets")
-def store_secret(req: SecretRequest):
-    encrypted_value = encryption.encrypt(req.value)
+def store_secret(data: dict, user=Depends(verify_token)):
+
+    encrypted = cipher.encrypt(data["value"].encode()).decode()
 
     conn = get_db()
     cur = conn.cursor()
 
     cur.execute(
-        "INSERT INTO secrets (name, encrypted_value) VALUES (%s, %s)",
-        (req.name, encrypted_value)
+        """
+        INSERT INTO secrets(name, encrypted_value, owner_id, expires_at)
+        VALUES(%s,%s,%s,%s)
+        """,
+        (
+            data["name"],
+            encrypted,
+            user["user_id"],
+            datetime.utcnow() + timedelta(days=30)
+        )
     )
 
     conn.commit()
-    conn.close()
 
-    return {"message": "Secret stored"}
+    return {"status": "stored"}
 
-
+# Get secrets
 @app.get("/secrets")
-def list_secrets():
-    conn = get_db()
-    cur = conn.cursor()
+def list_secrets(user=Depends(verify_token)):
 
-    cur.execute("SELECT id, name, created_at FROM secrets")
-
-    secrets = cur.fetchall()
-
-    conn.close()
-
-    return secrets
-
-
-@app.get("/secrets/{secret_id}")
-def get_secret(secret_id: int):
     conn = get_db()
     cur = conn.cursor()
 
     cur.execute(
-        "SELECT encrypted_value FROM secrets WHERE id=%s",
-        (secret_id,)
+        "SELECT id,name FROM secrets WHERE owner_id=%s",
+        (user["user_id"],)
+    )
+
+    return {"secrets": cur.fetchall()}
+
+# Get secret
+@app.get("/secrets/{secret_id}")
+def get_secret(secret_id: int, user=Depends(verify_token)):
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT encrypted_value FROM secrets
+        WHERE id=%s AND owner_id=%s
+        """,
+        (secret_id, user["user_id"])
     )
 
     result = cur.fetchone()
-    conn.close()
 
     if not result:
-        raise HTTPException(status_code=404, detail="Secret not found")
+        raise HTTPException(404, "Not found")
 
-    decrypted = encryption.decrypt(result["encrypted_value"])
+    decrypted = cipher.decrypt(result[0].encode()).decode()
 
     return {"value": decrypted}
-
-
-# =========================
-# Startup Event
-# =========================
-
-@app.on_event("startup")
-def startup():
-    init_db()
-    print("CipherMind Enterprise initialized")
