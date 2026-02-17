@@ -122,28 +122,41 @@ async function checkStatus() {
         JSON.stringify(data, null, 2);
 }
 
+
+const API_BASE = "https://ciphermind-api.onrender.com";
+
 async function testEncryption() {
 
     const text = document.getElementById("testText").value;
 
-    const res = await fetch(API + "/encrypt", {
 
-        method: "POST",
+    if (!text) {
+        alert("Enter text first");
+        return;
+    }
 
-        headers: {
-            "Content-Type": "application/json"
-        },
+    try {
+        const response = await fetch(`${API_BASE}/encrypt`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                text: text
+            })
+        });
 
-        body: JSON.stringify({ text })
+        const data = await response.json();
 
-    });
+        document.getElementById("encryptResult").innerText =
+            "Encrypted: " + data.encrypted;
 
-    const data = await res.json();
-
-    document.getElementById("encryptResult").innerText =
-        data.encrypted;
+    } catch (error) {
+        document.getElementById("encryptResult").innerText =
+            "Error connecting to backend";
+        console.error(error);
+    }
 }
-
 </script>
 
 </body>
