@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="607d4712-15a1-476f-9a1d-6a0372698d1e" name="Changes" comment="add chipermind" />
+    <list default="true" id="607d4712-15a1-476f-9a1d-6a0372698d1e" name="Changes" comment="﻿Merge branch 'main' of https://github.com/deepak0071-ibm/ciphermind-ai&#10;# Please enter a commit message to explain why this merge is necessary,&#10;# especially if it merges an updated upstream into a topic branch.&#10;#&#10;# Lines starting with '#' will be ignored, and an empty message aborts&#10;# the commit." />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -65,6 +65,7 @@
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
     "to.speed.mode.migration.done": "true",
     "vue.rearranger.settings.migration": "true"
   }
@@ -118,7 +119,7 @@
       <workItem from="1771301693488" duration="1090000" />
       <workItem from="1771302844135" duration="1607000" />
       <workItem from="1771304541355" duration="626000" />
-      <workItem from="1771305196688" duration="3019000" />
+      <workItem from="1771305196688" duration="3704000" />
     </task>
     <task id="LOCAL-00001" summary="add chipermind">
       <option name="closed" value="true" />
