@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CipherMind Admin Dashboard</title>
+
+<style>
+
+body {
+    font-family: Arial;
+    background: #0b0f1a;
+    color: white;
+    margin: 0;
+}
+
+header {
+    background: #111827;
+    padding: 20px;
+    text-align: center;
+}
+
+.container {
+    max-width: 1000px;
+    margin: auto;
+    padding: 20px;
+}
+
+.card {
+    background: #111827;
+    padding: 20px;
+    margin-top: 20px;
+    border-radius: 10px;
+}
+
+button {
+    padding: 10px;
+    background: #00ffd5;
+    border: none;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+button:hover {
+    background: #00c9aa;
+}
+
+.result {
+    background: black;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+.status {
+    color: #00ffd5;
+    font-weight: bold;
+}
+
+</style>
+
+</head>
+<body>
+
+<header>
+<h1>CipherMind Admin Dashboard</h1>
+<p>Production Control Panel</p>
+</header>
+
+<div class="container">
+
+<div class="card">
+
+<h2>System Status</h2>
+
+<button onclick="checkStatus()">Check Backend Status</button>
+
+<div id="statusResult" class="result"></div>
+
+</div>
+
+
+<div class="card">
+
+<h2>Encryption Test</h2>
+
+<input id="testText" placeholder="Enter test text">
+
+<button onclick="testEncryption()">Test Encryption</button>
+
+<div id="encryptResult" class="result"></div>
+
+</div>
+
+
+<div class="card">
+
+<h2>Captured Leads</h2>
+
+<p>This requires backend /leads endpoint (optional upgrade)</p>
+
+<button onclick="alert('Backend leads endpoint can be added next')">
+View Leads
+</button>
+
+</div>
+
+</div>
+
+
+<script>
+
+const API = "https://ciphermind-api.onrender.com";
+
+async function checkStatus() {
+
+    const res = await fetch(API + "/");
+
+    const data = await res.json();
+
+    document.getElementById("statusResult").innerHTML =
+        "<span class='status'>ONLINE</span><br>" +
+        JSON.stringify(data, null, 2);
+}
+
+async function testEncryption() {
+
+    const text = document.getElementById("testText").value;
+
+    const res = await fetch(API + "/encrypt", {
+
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({ text })
+
+    });
+
+    const data = await res.json();
+
+    document.getElementById("encryptResult").innerText =
+        data.encrypted;
+}
+
+</script>
+
+</body>
+</html>
