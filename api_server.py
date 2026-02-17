@@ -2,14 +2,15 @@ from fastapi import FastAPI
 import uvicorn
 import os
 
-from encryption import EncryptionManager
+from encryption import EncryptionEngine
+
 from database import DatabaseManager
 
 # Initialize FastAPI app
 app = FastAPI(title="CipherMind AI API", version="1.0")
 
 # Initialize components
-encryption = EncryptionManager()
+encryption = EncryptionEngine()
 database = DatabaseManager()
 
 # Root endpoint (health check)
