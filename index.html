@@ -1,9 +1,147 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<title>CipherMind AI</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CipherMind AI — Autonomous Encryption Platform</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #0b0f1a;
+    color: white;
+    margin: 0;
+}
+
+header {
+    padding: 20px;
+    background: #111827;
+    text-align: center;
+}
+
+h1 {
+    color: #00ffd5;
+}
+
+.container {
+    max-width: 900px;
+    margin: auto;
+    padding: 20px;
+}
+
+.card {
+    background: #111827;
+    padding: 20px;
+    margin-top: 20px;
+    border-radius: 10px;
+}
+
+input, textarea, button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 5px;
+    border: none;
+}
+
+button {
+    background: #00ffd5;
+    color: black;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #00c9aa;
+}
+
+.result {
+    background: black;
+    padding: 10px;
+    margin-top: 10px;
+    word-break: break-all;
+}
+</style>
+
 </head>
 <body>
-<h1>CipherMind AI Autonomous Deployment Active</h1>
-<p>Your autonomous SaaS platform is live.</p>
+
+<header>
+<h1>CipherMind AI</h1>
+<p>Autonomous AI-Powered Encryption Platform</p>
+</header>
+
+<div class="container">
+
+<div class="card">
+<h2>Live Encryption Demo</h2>
+
+<textarea id="plaintext" placeholder="Enter text to encrypt"></textarea>
+
+<button onclick="encryptText()">Encrypt</button>
+
+<div class="result" id="encryptedResult"></div>
+
+</div>
+
+<div class="card">
+<h2>Join Early Access</h2>
+
+<input id="name" placeholder="Name">
+<input id="email" placeholder="Email">
+<input id="company" placeholder="Company">
+
+<button onclick="saveLead()">Join CipherMind</button>
+
+<div id="leadResult"></div>
+
+</div>
+
+</div>
+
+<script>
+
+const API = "https://ciphermind-api.onrender.com";
+
+async function encryptText() {
+
+    const text = document.getElementById("plaintext").value;
+
+    const response = await fetch(API + "/encrypt", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ text })
+    });
+
+    const data = await response.json();
+
+    document.getElementById("encryptedResult").innerText =
+        data.encrypted || JSON.stringify(data);
+}
+
+async function saveLead() {
+
+    const name = document.getElementById("name").value;
+    const email = document.getElementById("email").value;
+    const company = document.getElementById("company").value;
+
+    const response = await fetch(API + "/lead", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ name, email, company })
+    });
+
+    const data = await response.json();
+
+    document.getElementById("leadResult").innerText =
+        "Successfully joined CipherMind!";
+}
+
+</script>
+
 </body>
 </html>
