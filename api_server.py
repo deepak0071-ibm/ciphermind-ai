@@ -1,35 +1,61 @@
-from cryptography.fernet import Fernet
-import os
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from encryption import EncryptionEngine
+
+app = FastAPI(title="CipherMind API")
+
+# Enable CORS for GitHub Pages frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Initialize encryption engine
+encryption = EncryptionEngine()
 
 
-class EncryptionEngine:
-
-    def __init__(self, key=None):
-
-        if key is None:
-
-            key = os.environ.get("CIPHERMIND_KEY")
-
-            if key is None:
-
-                key = Fernet.generate_key()
-
-                print("Generated temporary encryption key")
-
-        if isinstance(key, str):
-            key = key.encode()
-
-        self.cipher = Fernet(key)
+@app.get("/")
+def health():
+    return {
+        "message": "CipherMind API running",
+        "status": "healthy"
+    }
 
 
-    def encrypt(self, text):
+@app.post("/encrypt")
+def encrypt(data: dict):
+    try:
+        text = data.get("text")
 
-        if not isinstance(text, str):
-            raise Exception("Text must be string")
+        if not text:
+            raise HTTPException(status_code=400, detail="Text required")
 
-        return self.cipher.encrypt(text.encode()).decode()
+        encrypted = encryption.encrypt(text)
+
+        return {
+            "encrypted": encrypted
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-    def decrypt(self, encrypted_text):
+@app.post("/decrypt")
+def decrypt(data: dict):
+    try:
+        encrypted = data.get("encrypted")
 
-        return self.cipher.decrypt(encrypted_text.encode()).decode()
+        if not encrypted:
+            raise HTTPException(status_code=400, detail="Encrypted text required")
+
+        decrypted = encryption.decrypt(encrypted)
+
+        return {
+            "decrypted": decrypted
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
