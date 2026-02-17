@@ -1,42 +1,35 @@
-from fastapi import FastAPI, HTTPException
-from encryption import EncryptionEngine
-
-app = FastAPI()
-
-# Enable CORS (IMPORTANT)
-from fastapi.middleware.cors import CORSMiddleware
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Initialize encryption with key
-key = "ciphermind-secret-key"
-encryption = EncryptionEngine(key)
+from cryptography.fernet import Fernet
+import os
 
 
-@app.get("/")
-def root():
-    return {
-        "message": "CipherMind AI Backend is running",
-        "status": "healthy"
-    }
+class EncryptionEngine:
+
+    def __init__(self, key=None):
+
+        if key is None:
+
+            key = os.environ.get("CIPHERMIND_KEY")
+
+            if key is None:
+
+                key = Fernet.generate_key()
+
+                print("Generated temporary encryption key")
+
+        if isinstance(key, str):
+            key = key.encode()
+
+        self.cipher = Fernet(key)
 
 
-@app.post("/encrypt")
-def encrypt(data: dict):
+    def encrypt(self, text):
 
-    text = data.get("text")
+        if not isinstance(text, str):
+            raise Exception("Text must be string")
 
-    if not text:
-        raise HTTPException(status_code=400, detail="text is required")
+        return self.cipher.encrypt(text.encode()).decode()
 
-    encrypted = encryption.encrypt(text)
 
-    return {
-        "encrypted": encrypted
-    }
+    def decrypt(self, encrypted_text):
+
+        return self.cipher.decrypt(encrypted_text.encode()).decode()
