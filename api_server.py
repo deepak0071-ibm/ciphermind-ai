@@ -1,19 +1,22 @@
 from fastapi import FastAPI
 import uvicorn
 import os
+from fastapi.middleware.cors import CORSMiddleware
+
 
 from encryption import EncryptionEngine
 
 from database import DatabaseManager
+app = FastAPI()
 
-# Initialize FastAPI app
-app = FastAPI(title="CipherMind AI API", version="1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # allow all (safe for now)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Initialize components
-encryption = EncryptionEngine()
-database = DatabaseManager()
-
-# Root endpoint (health check)
 @app.get("/")
 def root():
     return {
