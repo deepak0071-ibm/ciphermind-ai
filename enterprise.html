@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CipherMind Enterprise Dashboard</title>
+
+<style>
+
+body {
+    font-family: Arial;
+    background: #0b0f1a;
+    color: white;
+    margin: 0;
+}
+
+header {
+    background: #111827;
+    padding: 20px;
+    text-align: center;
+}
+
+.container {
+    max-width: 1100px;
+    margin: auto;
+    padding: 20px;
+}
+
+.card {
+    background: #111827;
+    padding: 20px;
+    margin-top: 20px;
+    border-radius: 10px;
+}
+
+input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+    background: black;
+    color: white;
+    border: 1px solid #333;
+}
+
+button {
+    padding: 10px;
+    background: #00ffd5;
+    border: none;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+button:hover {
+    background: #00c9aa;
+}
+
+.result {
+    background: black;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+.secret {
+    border-bottom: 1px solid #333;
+    padding: 5px;
+}
+
+</style>
+
+</head>
+<body>
+
+<header>
+<h1>CipherMind Enterprise</h1>
+<p>Secrets Vault Control Panel</p>
+</header>
+
+<div class="container">
+
+<!-- LOGIN -->
+<div class="card">
+
+<h2>Login</h2>
+
+<input id="username" placeholder="Username">
+<input id="password" placeholder="Password" type="password">
+
+<button onclick="login()">Login</button>
+
+<div id="loginResult" class="result"></div>
+
+</div>
+
+
+<!-- ENCRYPT -->
+<div class="card">
+
+<h2>Encryption Test</h2>
+
+<input id="encryptText" placeholder="Text to encrypt">
+
+<button onclick="encrypt()">Encrypt</button>
+
+<div id="encryptResult" class="result"></div>
+
+</div>
+
+
+<!-- STORE SECRET -->
+<div class="card">
+
+<h2>Store Secret</h2>
+
+<input id="secretName" placeholder="Secret name">
+<input id="secretValue" placeholder="Secret value">
+
+<button onclick="storeSecret()">Store Secret</button>
+
+<div id="storeResult" class="result"></div>
+
+</div>
+
+
+<!-- LIST SECRETS -->
+<div class="card">
+
+<h2>Secrets Vault</h2>
+
+<button onclick="loadSecrets()">Load Secrets</button>
+
+<div id="secretsList" class="result"></div>
+
+</div>
+
+
+</div>
+
+<script>
+
+const API = "https://ciphermind-api.onrender.com";
+
+let token = localStorage.getItem("token");
+
+function setToken(t) {
+    token = t;
+    localStorage.setItem("token", t);
+}
+
+
+async function login() {
+
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
+
+    const res = await fetch(API + "/login", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({username,password})
+    });
+
+    const data = await res.json();
+
+    if(data.access_token){
+        setToken(data.access_token);
+        document.getElementById("loginResult").innerText =
+            "Login successful";
+    } else {
+        document.getElementById("loginResult").innerText =
+            JSON.stringify(data);
+    }
+}
+
+
+async function encrypt(){
+
+    const text = document.getElementById("encryptText").value;
+
+    const res = await fetch(API + "/encrypt", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({text})
+    });
+
+    const data = await res.json();
+
+    document.getElementById("encryptResult").innerText =
+        data.encrypted;
+}
+
+
+async function storeSecret(){
+
+    if(!token){
+        alert("Login first");
+        return;
+    }
+
+    const name = document.getElementById("secretName").value;
+    const value = document.getElementById("secretValue").value;
+
+    const res = await fetch(API + "/secrets", {
+
+        method:"POST",
+
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization":"Bearer "+token
+        },
+
+        body: JSON.stringify({name,value})
+
+    });
+
+    const data = await res.json();
+
+    document.getElementById("storeResult").innerText =
+        JSON.stringify(data,null,2);
+}
+
+
+async function loadSecrets(){
+
+    if(!token){
+        alert("Login first");
+        return;
+    }
+
+    const res = await fetch(API + "/secrets", {
+
+        headers:{
+            "Authorization":"Bearer "+token
+        }
+
+    });
+
+    const data = await res.json();
+
+    let html="";
+
+    data.forEach(secret=>{
+        html+=`
+        <div class="secret">
+        ${secret.id} : ${secret.name}
+        </div>
+        `;
+    });
+
+    document.getElementById("secretsList").innerHTML = html;
+}
+
+</script>
+
+</body>
+</html>
