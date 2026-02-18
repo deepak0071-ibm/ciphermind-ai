@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>CipherMind Vault Explorer</title>
+
+<style>
+
+body {
+    font-family: Arial;
+    background: #0b0f1a;
+    color: white;
+}
+
+header {
+    background: #111827;
+    padding: 15px;
+    text-align: center;
+}
+
+.container {
+    max-width: 1000px;
+    margin: auto;
+    padding: 20px;
+}
+
+.card {
+    background: #111827;
+    padding: 20px;
+    margin-top: 20px;
+    border-radius: 10px;
+}
+
+input, button {
+    padding: 10px;
+    margin-top: 5px;
+}
+
+button {
+    background: #00ffd5;
+    border: none;
+    cursor: pointer;
+}
+
+.result {
+    background: black;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+.secret {
+    border-bottom: 1px solid gray;
+    padding: 5px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+<h2>CipherMind CyberArk Vault Explorer</h2>
+</header>
+
+<div class="container">
+
+<div class="card">
+
+<h3>Login</h3>
+
+<input id="username" placeholder="username">
+<input id="password" placeholder="password" type="password">
+
+<button onclick="login()">Login</button>
+
+<div id="loginResult" class="result"></div>
+
+</div>
+
+
+<div class="card">
+
+<h3>Store Secret</h3>
+
+<input id="secretName" placeholder="secret name">
+<input id="secretValue" placeholder="secret value">
+
+<button onclick="storeSecret()">Store</button>
+
+<div id="storeResult" class="result"></div>
+
+</div>
+
+
+<div class="card">
+
+<h3>Vault Secrets</h3>
+
+<button onclick="loadSecrets()">Refresh</button>
+
+<div id="secretsList" class="result"></div>
+
+</div>
+
+
+<div class="card">
+
+<h3>Audit Logs (Admin/Auditor)</h3>
+
+<button onclick="loadAudit()">Load Audit Logs</button>
+
+<div id="auditLogs" class="result"></div>
+
+</div>
+
+</div>
+
+<script>
+
+const API = "https://ciphermind-api.onrender.com"
+
+let token = localStorage.getItem("token")
+
+
+function saveToken(t){
+    token = t
+    localStorage.setItem("token", t)
+}
+
+
+async function login(){
+
+    const username = document.getElementById("username").value
+    const password = document.getElementById("password").value
+
+    const res = await fetch(API+"/login",{
+
+        method:"POST",
+
+        headers:{
+            "Content-Type":"application/json"
+        },
+
+        body: JSON.stringify({
+            username: username,
+            password: password
+        })
+
+    })
+
+    const data = await res.json()
+
+    if(data.access_token){
+
+        saveToken(data.access_token)
+
+        document.getElementById("loginResult").innerText =
+        "Login success. Role: "+data.role
+
+    }
+    else{
+        document.getElementById("loginResult").innerText =
+        JSON.stringify(data)
+    }
+
+}
+
+
+async function storeSecret(){
+
+    if(!token){
+        alert("Login first")
+        return
+    }
+
+    const name = document.getElementById("secretName").value
+    const value = document.getElementById("secretValue").value
+
+    const res = await fetch(API+"/secrets",{
+
+        method:"POST",
+
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization":"Bearer "+token
+        },
+
+        body: JSON.stringify({
+            name:name,
+            value:value
+        })
+
+    })
+
+    const data = await res.json()
+
+    document.getElementById("storeResult").innerText =
+    JSON.stringify(data)
+
+}
+
+
+async function loadSecrets(){
+
+    if(!token){
+        alert("Login first")
+        return
+    }
+
+    const res = await fetch(API+"/secrets",{
+
+        headers:{
+            "Authorization":"Bearer "+token
+        }
+
+    })
+
+    const data = await res.json()
+
+    let html=""
+
+    data.forEach(secret=>{
+
+        html += "<div class='secret'>"+
+        secret[0]+" (owner:"+secret[1]+")"+
+        "</div>"
+
+    })
+
+    document.getElementById("secretsList").innerHTML = html
+
+}
+
+
+async function loadAudit(){
+
+    if(!token){
+        alert("Login first")
+        return
+    }
+
+    const res = await fetch(API+"/audit",{
+
+        headers:{
+            "Authorization":"Bearer "+token
+        }
+
+    })
+
+    const data = await res.json()
+
+    let html=""
+
+    data.forEach(log=>{
+
+        html += "<div>"+
+        log[0]+" | "+
+        log[1]+" | "+
+        log[2]+" | "+
+        log[3]+
+        "</div>"
+
+    })
+
+    document.getElementById("auditLogs").innerHTML = html
+
+}
+
+</script>
+
+</body>
+</html>
