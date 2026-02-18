@@ -4,17 +4,16 @@ import os
 
 class EncryptionEngine:
 
-    def __init__(self, key=None):
+    def __init__(self):
 
+        key = os.environ.get("CIPHERMIND_KEY")
+
+        # Generate persistent key if not exists
         if key is None:
 
-            key = os.environ.get("CIPHERMIND_KEY")
+            key = Fernet.generate_key().decode()
 
-            if key is None:
-
-                key = Fernet.generate_key().decode()
-
-                print("Generated new encryption key")
+            print("Generated temporary encryption key:", key)
 
         if isinstance(key, str):
             key = key.encode()
@@ -23,6 +22,9 @@ class EncryptionEngine:
 
 
     def encrypt(self, text):
+
+        if not text:
+            raise Exception("No text provided")
 
         return self.cipher.encrypt(text.encode()).decode()
 

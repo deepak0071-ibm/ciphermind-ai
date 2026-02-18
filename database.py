@@ -1,27 +1,38 @@
-import sqlite3
+import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
-class DatabaseManager:
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
-    def __init__(self):
-        self.conn = sqlite3.connect("ciphermind.db", check_same_thread=False)
-        self.cursor = self.conn.cursor()
+def get_conn():
+    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
-        self.cursor.execute("""
-        CREATE TABLE IF NOT EXISTS leads (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            email TEXT,
-            company TEXT
-        )
-        """)
+def init_db():
+    conn = get_conn()
+    cur = conn.cursor()
 
-    def save_lead(self, name, email, company):
-        self.cursor.execute(
-            "INSERT INTO leads (name, email, company) VALUES (?, ?, ?)",
-            (name, email, company)
-        )
-        self.conn.commit()
+    # Users table
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        role TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
 
-    def get_leads(self):
-        self.cursor.execute("SELECT * FROM leads")
-        return self.cursor.fetchall()
+    # Secrets table
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS secrets (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        value TEXT NOT NULL,
+        owner TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    conn.commit()
+    cur.close()
+    conn.close()

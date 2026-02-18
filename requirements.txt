@@ -1,9 +1,6 @@
 fastapi
 uvicorn
 cryptography
-python-dotenv
-python-jose
-passlib[bcrypt]
-sqlalchemy
 psycopg2-binary
 pyjwt
+passlib[bcrypt]

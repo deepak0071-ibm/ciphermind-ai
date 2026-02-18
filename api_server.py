@@ -5,9 +5,16 @@ import jwt
 from datetime import datetime, timedelta
 import database
 from encryption import EncryptionEngine
+from database import init_db
+
 
 # Initialize app
 app = FastAPI(title="CipherMind Enterprise CyberArk Vault")
+@app.on_event("startup")
+def startup():
+    init_db()
+    print("Database initialized")
+
 
 # Initialize database
 database.init_db()
